@@ -1,5 +1,75 @@
 use itertools::iproduct; // Cartesian multiplication of iterators
-use std::{collections::HashSet, ops::Range};
+use rand::{rngs::OsRng, seq::SliceRandom}; // Unexplainably bad bruteforcer for mappings
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Range,
+};
+
+fn test_mapping() {
+    let fg = |a: isize, b: isize| {
+        let mut r = (a * b).rem_euclid(17);
+        while r > 17 {
+            r -= 17;
+        }
+        while r > 8 {
+            r = 17 - r;
+        }
+        return r;
+    };
+    let fg1 = |a: isize, b: isize| (a + b).rem_euclid(8);
+
+    let mut mapping: HashMap<isize, isize> = HashMap::from([
+        (1, 0),
+        (2, 1),
+        (3, 3),
+        (4, 2),
+        (5, 4),
+        (6, 5),
+        (7, 6),
+        (8, 5),
+    ]);
+    loop {
+        let mut res_l = String::with_capacity(512);
+        let mut res_r = String::with_capacity(512);
+        let mut success = true;
+        for (a, b) in iproduct!(1..=8, 1..=8) {
+            let left = mapping.get(&fg(a, b)).unwrap();
+            let right = fg1(*mapping.get(&a).unwrap(), *mapping.get(&b).unwrap());
+            res_l.push_str(format!("{left}\t").as_str());
+            if b == 8 {
+                res_l.push('\n');
+            }
+            res_r.push_str(format!("{right}\t").as_str());
+            if b == 8 {
+                res_r.push('\n');
+            }
+            if *left != right {
+                success = false;
+                res_l.clear();
+                res_r.clear();
+                let mut new_map: Vec<isize> = (2..=8).collect();
+                new_map.shuffle(&mut OsRng);
+                new_map.iter().zip(1..=7).for_each(|(l, r)| {
+                    mapping.insert(*l, r);
+                });
+                // inject assumptions ;)
+                mapping.insert(1, 0);
+                mapping.insert(2, 2);
+                break;
+            }
+        }
+
+        if success {
+            println!("Found mapping");
+            mapping.iter().for_each(|(a, b)| println!("{a}->{b}"));
+
+            print!("{res_l}");
+            println!("---");
+            print!("{res_r}");
+            break;
+        }
+    }
+}
 
 fn find_cyclic_subgroups<F>(op: F, r: Range<isize>)
 where
@@ -66,4 +136,6 @@ fn main() {
         |arg0: i8, arg1: i8| op(arg0 as isize, arg1 as isize) as i8,
         (RANGE_MIN as isize)..(RANGE_MAX + 1) as isize,
     );
+
+    test_mapping();
 }
